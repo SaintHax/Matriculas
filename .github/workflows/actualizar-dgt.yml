@@ -18,11 +18,13 @@ jobs:
           python-version: '3.12'
       - name: Consultar datos publicos DGT
         run: python scripts/update_dgt.py
+      - name: Consultar referencias de ciclomotores
+        run: python scripts/update_ciclomotores.py
       - name: Publicar cambios
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/dgt.json
+          git add data/dgt.json data/ciclomotores.json
           if ! git diff --cached --quiet; then
             git commit -m 'Actualizar series DGT'
             git push
