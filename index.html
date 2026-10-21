@@ -283,9 +283,10 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     '2026-10':{date:'2026-10-19',letters:'NTJ',source:'referencia-de-serie'}
   };
   let liveData={daily:{},monthEnds:{...embeddedReferences},updatedAt:null};
+  let cycleReferences=[{"plate":"C0000BBB","date":"1999-07-27","precision":"range-start","source":"https://www.dgt.es/export/sites/web-DGT/.galleries/downloads/dgt-en-cifras/publicaciones/Anuario_Estadistico_General/Anuario-estadistico-general-2000.pdf"},{"plate":"C0000BPJ","date":"2004-01-01","precision":"range-end","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C0000BRB","date":"2004-11-01","precision":"month-hint","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C0000BSB","date":"2006-03-01","precision":"month-hint","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C0000BTB","date":"2007-06-01","precision":"month-hint","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C0000BVB","date":"2009-07-01","precision":"month-hint","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C0000BWB","date":"2017-06-01","precision":"month-hint","source":"https://matriculasdelmundo.com/fechas-matriculas-motos.php"},{"plate":"C8833BWY","date":"2026-10-19","precision":"observed","source":"https://www.seisenlinea.com/ultima-matricula/"}];
   const status=document.getElementById('dataStatus');
   const plateVisual=document.querySelector('.plate');
-  const cycleSeries=[['2004-11','BRB'],['2006-03','BSB'],['2007-06','BTB'],['2009-07','BVB'],['2017-06','BWB']];
+
   function parsePlate(value){
     const s=value.toUpperCase().replace(/[^A-Z0-9]/g,'');
     let m=s.match(/^C(\d{4})([A-Z]{2,3})$/);
@@ -298,34 +299,78 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     if(m)return {type:'provincialNumeric',province:m[1],number:m[2]};
     return null;
   }
+
+  // Los hitos de ciclomotores son independientes de las matrículas ordinarias.
+  // Los datos existentes NO contienen un histórico mes a mes completo.
+  function lookupCiclomotor(plate){
+    if(plate.letters.length!==3 || idx(plate.letters)<idx('BBB'))return null;
+    const serial=modernPlateSerial(plate.number,plate.letters);
+    const refs=cycleReferences.map(r=>({serial:modernPlateSerial(r.plate.slice(1,5),r.plate.slice(5)),date:r.date,precision:r.precision}))
+      .filter(r=>r.serial>=0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date)).sort((a,b)=>a.serial-b.serial);
+    if(!refs.length)return {range:'Sin referencias disponibles'};
+    // El primer bloque BBB–BPJ es conocido sólo para el intervalo 1999–2004.
+    const bbb=modernPlateSerial('0000','BBB'),bpj=modernPlateSerial('0000','BPJ');
+    if(serial>=bbb && serial<=bpj)return {range:'1999–2004'};
+    const next=refs.find(r=>r.serial>=serial);
+    const prev=[...refs].reverse().find(r=>r.serial<=serial);
+    if(!next || !prev)return {range:!next?'Fecha pendiente de referencia':'1999–2004'};
+    const start=prev.date.slice(0,7),end=next.date.slice(0,7);
+    // Un mes sólo se afirma cuando ambos hitos acotan el mismo mes.
+    if(start===end){const d=parseYearMonth(start);return {...d,confidence:'bounded'};}
+    const startDate=new Date(prev.date+'T00:00:00Z');
+    const endDate=new Date(next.date+'T00:00:00Z');
+    const span=(endDate-startDate)/(86400000*30.4375);
+    if(span>30){
+      const from=Number(prev.date.slice(0,4)),to=Number(next.date.slice(0,4));
+      return {range:from===to?String(from):`${from}–${to}`};
+    }
+    // A partir de dos hitos distanciados menos de 30 meses podemos
+    // dar un mes aproximado, nunca atribuirle precisión oficial.
+    const ratio=(serial-prev.serial)/(next.serial-prev.serial||1);
+    const instant=startDate.getTime()+ratio*(endDate.getTime()-startDate.getTime());
+    const d=new Date(instant);
+    return {year:d.getUTCFullYear(),month:d.getUTCMonth(),estimated:true};
+  }
+
   function parseYearMonth(s){const [year,month]=s.split('-').map(Number);return {year,month:month-1};}
   function lookup(value){
     const plate=parsePlate(value);
     if(!plate)return null;
     if(plate.type==='cycle'){
-      const category='Ciclomotor · matrícula amarilla';
-      if(plate.letters.length!==3||idx(plate.letters)<idx('BBB'))return {category,note:'Serie incompleta o letras no permitidas.'};
-      const rank=idx(plate.letters);
-      if(rank<idx('BRB'))return {category,range:'1999–2004',note:'Período amplio de rematriculaciones; sin fecha exacta verificable.'};
-      for(let i=cycleSeries.length-1;i>=0;i--){
-        if(rank>=idx(cycleSeries[i][1])){
-          const next=cycleSeries[i+1];
-          return {category,range:next?`${cycleSeries[i][0]} – ${next[0]}`:`Desde ${cycleSeries[i][0]}`,
-            note:'Referencia de series de ciclomotores, aproximada. No equivale a una fecha exacta de matriculación.'};
-        }
-      }
-      return {category,note:'Sin fecha de referencia verificada.'};
+      return lookupCiclomotor(plate);
     }
     if(plate.type==='modern'){
       if(idx(plate.letters)<idx('BBB'))return null;
       const category='Matrícula ordinaria';
       const precise=lookupModernPrecise(plate.number,plate.letters);
       if(precise)return {...precise,category,note:'Mes calculado mediante fronteras históricas de matrícula completa.'};
-      if(idx(plate.letters)>idx('NSF')){
-        const months=Object.entries({...embeddedReferences,...(liveData.monthEnds||{})}).sort((a,b)=>a[0].localeCompare(b[0]));
-        for(const [key,data] of months){if(idx(data.letters)>=idx(plate.letters))return {...parseYearMonth(key),category,note:'Mes orientativo según referencia de serie publicada. No certifica el día ni la fecha individual de matriculación.'};}
-        const daily=Object.entries(liveData.daily||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-        for(const [date,letters] of daily){if(idx(letters)>=idx(plate.letters))return {...parseYearMonth(date.slice(0,7)),category,note:'Mes aproximado a partir de una serie diaria publicada por la DGT.'};}
+      if(modernPlateSerial(plate.number,plate.letters)>modernPlateSerial('2268','NSF')){
+        // Los ZIP oficiales sólo contienen LAS TRES LETRAS, no los cuatro números.
+        // Una serie puede abarcar más de un mes. Sólo se asigna un mes cuando
+        // una referencia anterior y una posterior acotan la misma mensualidad.
+        const dates=Object.entries(liveData.daily||{}).filter(([day,letters])=>
+          /^\d{4}-\d{2}-\d{2}$/.test(day)&&idx(letters)>=0)
+          .sort((a,b)=>a[0].localeCompare(b[0]));
+        const target=idx(plate.letters);
+        const first=dates.find(([,letters])=>idx(letters)>=target);
+        const earlier=[...dates].reverse().find(([,letters])=>idx(letters)<target);
+        if(first&&earlier&&first[0].slice(0,7)===earlier[0].slice(0,7))
+          return {...parseYearMonth(first[0].slice(0,7)),category};
+        // Alternativa: último mes cerrado con serie menor y un día del
+        // nuevo mes con serie >= objetivo (suficiente para acotar mes).
+        if(first){
+          const ym=first[0].slice(0,7);
+          const prev=new Date(first[0]+'T12:00:00Z'); prev.setUTCDate(0);
+          const previous=prev.toISOString().slice(0,7);
+          const prevEnd=(liveData.monthEnds||{})[previous];
+          if(prevEnd&&idx(prevEnd.letters)>=0&&idx(prevEnd.letters)<target)
+            return {...parseYearMonth(ym),category};
+        }
+        // Última serie publicada: permite reconocer el mes ACTUAL si ha habido
+        // evidencia del comienzo de la serie dentro del mismo mes.
+        if(first&&first[0].slice(0,7)===new Date().toISOString().slice(0,7)&&
+           earlier&&earlier[0].slice(0,7)===first[0].slice(0,7))
+          return {...parseYearMonth(first[0].slice(0,7)),category};
         return {category,note:'Serie posterior al último dato DGT descargado. No se asigna una fecha sin evidencia.'};
       }
       for(const b of boundaries)if(idx(plate.letters)<=b.index)return {year:b.year,month:b.month,category,note:'Estimación con referencia histórica de la serie.'};
@@ -346,6 +391,17 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     m=clean.match(/^([A-Z]{1,2})(\d{0,6})([A-Z]{0,2})$/);
     if(m)return m[1]+(m[2]?' '+m[2]:'')+(m[3]?' '+m[3]:'');
     return clean;
+  }
+  async function refreshCycles(){
+    try{
+      const res=await fetch('data/ciclomotores.json?t='+Date.now(),{cache:'no-store'});
+      if(!res.ok)throw Error('Sin base de ciclomotores');
+      const d=await res.json();
+      if(Array.isArray(d.references)&&d.references.length>=8){
+        cycleReferences=d.references.filter(x=>/^C\d{4}[A-Z]{3}$/.test(x.plate)&&/^\d{4}-\d{2}-\d{2}$/.test(x.date));
+      }
+    }catch(e){ /* Referencias integradas de respaldo */ }
+    updateResult();
   }
   async function refresh(){
     try{
@@ -378,7 +434,7 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     if(!found){result.replaceChildren();result.classList.remove('show');return;}
     result.replaceChildren();
     function add(cls,text){const span=document.createElement('span');span.className=cls;span.textContent=text;result.appendChild(span);}
-    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${months[found.month]} de ${found.year}`:'Fecha no disponible'));
+    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${found.estimated?'≈ ':''}${months[found.month]} de ${found.year}`:'Fecha no disponible'));
     if(found.year&&Number.isInteger(found.month)&&!found.range){
       add('result-star','★');
       add('elapsed',elapsedSince(found.year,found.month));
@@ -387,7 +443,8 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
   }
   input.addEventListener('input',()=>{input.value=formatPlate(input.value);updateResult();});
   refresh();
-  setInterval(refresh,6*60*60*1000);
+  refreshCycles();
+  setInterval(()=>{refresh();refreshCycles();},6*60*60*1000);
 
 })();
 </script>
