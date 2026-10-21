@@ -49,7 +49,7 @@ body:after{
 .result-shell{width:min(760px,calc(100% - 20px));margin:28px auto 0;padding:1px;border-radius:18px;background:linear-gradient(135deg,rgba(116,190,255,.32),rgba(255,255,255,.06),rgba(116,190,255,.16));box-shadow:0 18px 55px rgba(0,0,0,.28);opacity:0;transform:translateY(-8px);transition:.25s ease;pointer-events:none}
 .result-shell.show{opacity:1;transform:none}
 #result{min-height:86px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:20px 24px;border-radius:17px;background:linear-gradient(180deg,rgba(14,20,29,.96),rgba(8,12,18,.96));font-size:clamp(21px,3vw,29px);font-weight:750;letter-spacing:-.025em;color:#f8fbff}
-#result .elapsed{font-weight:500;color:#0b55c9}.result-date{color:#fff}.result-star{color:#ffd600;font-weight:900;text-shadow:0 0 8px rgba(255,214,0,.3);margin:0 .15em}.hint{margin-top:15px;font-size:12px;color:#5f6d7f;letter-spacing:.02em}
+#result .elapsed{font-weight:500;color:#0b55c9}.result-date{color:#fff}.hint{margin-top:15px;font-size:12px;color:#5f6d7f;letter-spacing:.02em}
 footer{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:92px;margin:0 -18px;padding:24px 20px;border-top:5px solid var(--blue);background:#0a1017;color:#fff;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;line-height:normal;letter-spacing:.025em;box-shadow:0 -4px 18px rgba(0,0,0,.18)}
 @media(max-width:760px){.topbar-inner{width:min(100% - 28px,1180px);min-height:76px}.brand-logo{width:58px;height:58px;border-radius:14px}.app{padding:28px 0 42px}}
 @media(max-width:620px){body{padding:0 12px}.topbar,footer{margin:0 -12px}.plate-wrap{padding:6px;border-radius:17px}.plate{height:112px;border-radius:10px}.eu{width:68px;flex-basis:68px;font-size:21px;padding-bottom:9px}.stars{top:10px;transform:translateX(-50%) scale(.78)}#plate{font-size:clamp(35px,11vw,58px);padding:0 10px 2px;letter-spacing:.045em}.result-shell{margin-top:20px}#result{min-height:74px;padding:16px 14px}.hint{font-size:11px}}
@@ -73,7 +73,7 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
       </div>
     </div>
 
-    <div class="data-status" id="dataStatus">Consultando datos públicos DGT…</div>
+    <div class="data-status" id="dataStatus"></div>
     <div class="result-shell" id="resultShell"><div id="result" aria-live="polite"></div></div>
   </section>
 </main>
@@ -354,10 +354,9 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
       const x=await res.json();
       if(!x||typeof x.monthEnds!=='object')throw Error('Datos inválidos');
       liveData={...x,monthEnds:{...embeddedReferences,...x.monthEnds}};
-      status.textContent=x.updatedAt&&Object.keys(x.daily||{}).length
-        ?`Referencias disponibles · archivo actualizado ${x.updatedAt} · revisión programada`
-        :'Referencias históricas disponibles · pendiente de sincronización DGT';
-    }catch(e){status.textContent='Referencias locales disponibles · sincronización DGT no disponible';}
+      const match=typeof x.updatedAt==='string'&&/^(\d{4})-(\d{2})-(\d{2})$/.exec(x.updatedAt);
+      status.textContent=match?`Actualizado ${match[3]}-${match[2]}-${match[1]}`:'';
+    }catch(e){status.textContent='';}
     updateResult();
   }
   function elapsedSince(year,month){
@@ -379,10 +378,11 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     if(!found){result.replaceChildren();result.classList.remove('show');return;}
     result.replaceChildren();
     function add(cls,text){const span=document.createElement('span');span.className=cls;span.textContent=text;result.appendChild(span);}
-    add('result-category',found.category||'Matrícula española');
-    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${months[found.month]} de ${found.year}`:'Fecha no verificable'));
-    if(found.year&&Number.isInteger(found.month)&&!found.range){add('result-star','★');add('elapsed',elapsedSince(found.year,found.month));}
-    if(found.note)add('result-note',found.note);
+    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${months[found.month]} de ${found.year}`:'Fecha no disponible'));
+    if(found.year&&Number.isInteger(found.month)&&!found.range){
+      add('result-star','★');
+      add('elapsed',elapsedSince(found.year,found.month));
+    }
     result.classList.add('show');
   }
   input.addEventListener('input',()=>{input.value=formatPlate(input.value);updateResult();});
