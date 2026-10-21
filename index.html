@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matriculas Españolas · Yeray Santos</title>
-<meta name="matricula-engine" content="full-plate-month-boundaries-v2">
+<meta name="matricula-engine" content="DGT-auto-v4">
 <meta name="theme-color" content="#1c2225">
 <meta property="og:title" content="Matriculas Españolas · Yeray Santos">
 <meta property="og:image" content="https://raw.githubusercontent.com/SaintHax/Matriculas/refs/heads/main/Matriculas%20Espa%C3%B1olas.webp">
@@ -53,7 +53,7 @@ body:after{
 footer{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:92px;margin:0 -18px;padding:24px 20px;border-top:5px solid var(--blue);background:#0a1017;color:#fff;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;line-height:normal;letter-spacing:.025em;box-shadow:0 -4px 18px rgba(0,0,0,.18)}
 @media(max-width:760px){.topbar-inner{width:min(100% - 28px,1180px);min-height:76px}.brand-logo{width:58px;height:58px;border-radius:14px}.app{padding:28px 0 42px}}
 @media(max-width:620px){body{padding:0 12px}.topbar,footer{margin:0 -12px}.plate-wrap{padding:6px;border-radius:17px}.plate{height:112px;border-radius:10px}.eu{width:68px;flex-basis:68px;font-size:21px;padding-bottom:9px}.stars{top:10px;transform:translateX(-50%) scale(.78)}#plate{font-size:clamp(35px,11vw,58px);padding:0 10px 2px;letter-spacing:.045em}.result-shell{margin-top:20px}#result{min-height:74px;padding:16px 14px}.hint{font-size:11px}}
-</style>
+.data-status{margin:20px auto 0;font-size:12px;color:#9eb8d3}.result-category{flex-basis:100%;font-size:12px;color:#83bcff;text-transform:uppercase;letter-spacing:.1em}.result-note{flex-basis:100%;font-size:12px;color:#b4c5d8;font-weight:500;line-height:1.5}.plate.cycle{background:#ffdc44}.plate.cycle .eu{background:#e5b625;color:#151515}.plate.cycle #plate{font-size:clamp(30px,7vw,65px);letter-spacing:0}</style>
 </head>
 <body>
 <header class="topbar">
@@ -69,10 +69,11 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
           <div class="stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
           E
         </div>
-        <input id="plate" type="text" maxlength="12" autocomplete="off" spellcheck="false" autofocus placeholder="1234 ABC">
+        <input id="plate" type="text" maxlength="13" autocomplete="off" spellcheck="false" autofocus placeholder="1234 ABC">
       </div>
     </div>
 
+    <div class="data-status" id="dataStatus">Consultando datos públicos DGT…</div>
     <div class="result-shell" id="resultShell"><div id="result" aria-live="polite"></div></div>
   </section>
 </main>
@@ -275,69 +276,90 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     return null;
   }
 
+  // Referencias mínimas integradas: disponibles incluso si Pages publica solo index.html.
+  // Son límites de SERIE, no fechas comprobadas de una matrícula individual.
+  const embeddedReferences={
+    '2026-09':{date:'2026-09-30',letters:'NSZ',source:'referencia-de-serie'},
+    '2026-10':{date:'2026-10-19',letters:'NTJ',source:'referencia-de-serie'}
+  };
+  let liveData={daily:{},monthEnds:{...embeddedReferences},updatedAt:null};
+  const status=document.getElementById('dataStatus');
+  const plateVisual=document.querySelector('.plate');
+  const cycleSeries=[['2004-11','BRB'],['2006-03','BSB'],['2007-06','BTB'],['2009-07','BVB'],['2017-06','BWB']];
   function parsePlate(value){
-    const clean=value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-
-    // Formato moderno: 1234 ABC
-    let m=clean.match(/^(\d{4})([A-Z]{3})$/);
-    if(m) return {type:'modern', number:m[1], letters:m[2]};
-
-    // Formato provincial antiguo: GC 1234 AB / TF 1234 A / M 123456 AB
-    m=clean.match(/^([A-Z]{1,2})(\d{1,6})([A-Z]{1,2})$/);
-    if(m) return {type:'provincial', province:m[1], number:m[2], suffix:m[3]};
-
-    // Formato provincial aún más antiguo: GC 1234 / M 123456
-    m=clean.match(/^([A-Z]{1,2})(\d{1,6})$/);
-    if(m) return {type:'provincialNumeric', province:m[1], number:m[2]};
-
+    const s=value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    let m=s.match(/^C(\d{4})([A-Z]{2,3})$/);
+    if(m)return {type:'cycle',number:m[1],letters:m[2]};
+    m=s.match(/^(\d{4})([A-Z]{3})$/);
+    if(m)return {type:'modern',number:m[1],letters:m[2]};
+    m=s.match(/^([A-Z]{1,2})(\d{1,6})([A-Z]{1,2})$/);
+    if(m)return {type:'provincial',province:m[1],number:m[2],suffix:m[3]};
+    m=s.match(/^([A-Z]{1,2})(\d{1,6})$/);
+    if(m)return {type:'provincialNumeric',province:m[1],number:m[2]};
     return null;
   }
-
+  function parseYearMonth(s){const [year,month]=s.split('-').map(Number);return {year,month:month-1};}
   function lookup(value){
     const plate=parsePlate(value);
-    if(!plate) return null;
-
-    if(plate.type==='modern'){
-      // 1) Máxima precisión disponible: compara número + letras.
-      const precise = lookupModernPrecise(plate.number, plate.letters);
-      if(precise) return precise;
-
-      // 2) Fallback histórico anterior a la tabla granular:
-      //    usa las fronteras por serie del archivo original.
-      const valueIndex=idx(plate.letters);
-      if(valueIndex<0) return null;
-      for(const b of boundaries){
-        if(valueIndex<=b.index) return {year:b.year,month:b.month,estimated:true,precision:'series-fallback'};
+    if(!plate)return null;
+    if(plate.type==='cycle'){
+      const category='Ciclomotor · matrícula amarilla';
+      if(plate.letters.length!==3||idx(plate.letters)<idx('BBB'))return {category,note:'Serie incompleta o letras no permitidas.'};
+      const rank=idx(plate.letters);
+      if(rank<idx('BRB'))return {category,range:'1999–2004',note:'Período amplio de rematriculaciones; sin fecha exacta verificable.'};
+      for(let i=cycleSeries.length-1;i>=0;i--){
+        if(rank>=idx(cycleSeries[i][1])){
+          const next=cycleSeries[i+1];
+          return {category,range:next?`${cycleSeries[i][0]} – ${next[0]}`:`Desde ${cycleSeries[i][0]}`,
+            note:'Referencia de series de ciclomotores, aproximada. No equivale a una fecha exacta de matriculación.'};
+        }
       }
-      return null;
+      return {category,note:'Sin fecha de referencia verificada.'};
     }
-
-    if(plate.type==='provincial' && plate.province==='TF'){
-      return lookupTF(plate.number,plate.suffix);
+    if(plate.type==='modern'){
+      if(idx(plate.letters)<idx('BBB'))return null;
+      const category='Matrícula ordinaria';
+      const precise=lookupModernPrecise(plate.number,plate.letters);
+      if(precise)return {...precise,category,note:'Mes calculado mediante fronteras históricas de matrícula completa.'};
+      if(idx(plate.letters)>idx('NSF')){
+        const months=Object.entries({...embeddedReferences,...(liveData.monthEnds||{})}).sort((a,b)=>a[0].localeCompare(b[0]));
+        for(const [key,data] of months){if(idx(data.letters)>=idx(plate.letters))return {...parseYearMonth(key),category,note:'Mes orientativo según referencia de serie publicada. No certifica el día ni la fecha individual de matriculación.'};}
+        const daily=Object.entries(liveData.daily||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+        for(const [date,letters] of daily){if(idx(letters)>=idx(plate.letters))return {...parseYearMonth(date.slice(0,7)),category,note:'Mes aproximado a partir de una serie diaria publicada por la DGT.'};}
+        return {category,note:'Serie posterior al último dato DGT descargado. No se asigna una fecha sin evidencia.'};
+      }
+      for(const b of boundaries)if(idx(plate.letters)<=b.index)return {year:b.year,month:b.month,category,note:'Estimación con referencia histórica de la serie.'};
+      return {category,note:'Sin referencia suficiente.'};
     }
-
-    return null;
+    if(plate.type==='provincial'&&plate.province==='TF'){
+      const res=lookupTF(plate.number,plate.suffix);
+      return res?{...res,category:'Matrícula provincial TF',note:'Fecha estimada por registros provinciales históricos.'}:null;
+    }
+    return {category:'Matrícula provincial histórica',note:'Formato reconocido; no hay frontera provincial verificada para calcular el mes.'};
   }
-
   function formatPlate(value){
-    const clean=value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10);
-
-    let m=clean.match(/^(\d{0,4})([A-Z]{0,3})$/);
-    if(m && (m[1] || !clean)){
-      return m[1]+(m[1].length===4 && m[2]?' ':'')+m[2];
-    }
-
+    const clean=value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,11);
+    let m=clean.match(/^C(\d{0,4})([A-Z]{0,3})$/);
+    if(m)return 'C'+(m[1]?' '+m[1]:'')+(m[2]?' '+m[2]:'');
+    m=clean.match(/^(\d{0,4})([A-Z]{0,3})$/);
+    if(m&&(m[1]||!clean))return m[1]+(m[1].length===4&&m[2]?' ':'')+m[2];
     m=clean.match(/^([A-Z]{1,2})(\d{0,6})([A-Z]{0,2})$/);
-    if(m){
-      let out=m[1];
-      if(m[2]) out+=' '+m[2];
-      if(m[3]) out+=' '+m[3];
-      return out;
-    }
-
+    if(m)return m[1]+(m[2]?' '+m[2]:'')+(m[3]?' '+m[3]:'');
     return clean;
   }
-
+  async function refresh(){
+    try{
+      const res=await fetch('data/dgt.json?t='+Date.now(),{cache:'no-store'});
+      if(!res.ok)throw Error(res.status);
+      const x=await res.json();
+      if(!x||typeof x.monthEnds!=='object')throw Error('Datos inválidos');
+      liveData={...x,monthEnds:{...embeddedReferences,...x.monthEnds}};
+      status.textContent=x.updatedAt&&Object.keys(x.daily||{}).length
+        ?`Referencias disponibles · archivo actualizado ${x.updatedAt} · revisión programada`
+        :'Referencias históricas disponibles · pendiente de sincronización DGT';
+    }catch(e){status.textContent='Referencias locales disponibles · sincronización DGT no disponible';}
+    updateResult();
+  }
   function elapsedSince(year,month){
     const now=new Date();
     let total=(now.getFullYear()-year)*12+(now.getMonth()-month);
@@ -352,20 +374,21 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
   }
 
   function updateResult(){
+    plateVisual.classList.toggle('cycle',/^C\d/.test(input.value.toUpperCase().replace(/[^A-Z0-9]/g,'')));
     const found=lookup(input.value);
-    if(!found){
-      result.classList.remove('show');
-      result.textContent='';
-      return;
-    }
-    result.innerHTML=`<span class="result-date">${months[found.month]} de ${found.year}</span><span class="result-star">★</span><span class="elapsed">${elapsedSince(found.year,found.month)}</span>`;
+    if(!found){result.replaceChildren();result.classList.remove('show');return;}
+    result.replaceChildren();
+    function add(cls,text){const span=document.createElement('span');span.className=cls;span.textContent=text;result.appendChild(span);}
+    add('result-category',found.category||'Matrícula española');
+    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${months[found.month]} de ${found.year}`:'Fecha no verificable'));
+    if(found.year&&Number.isInteger(found.month)&&!found.range){add('result-star','★');add('elapsed',elapsedSince(found.year,found.month));}
+    if(found.note)add('result-note',found.note);
     result.classList.add('show');
   }
+  input.addEventListener('input',()=>{input.value=formatPlate(input.value);updateResult();});
+  refresh();
+  setInterval(refresh,6*60*60*1000);
 
-  input.addEventListener('input', () => {
-    input.value=formatPlate(input.value);
-    updateResult();
-  });
 })();
 </script>
 <script>
