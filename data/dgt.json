@@ -1,24 +1,36 @@
 {
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-21",
   "source": "https://www.dgt.es/",
   "daily": {
+    "2026-10-01": "NTB",
+    "2026-10-02": "NTB",
+    "2026-10-05": "NTC",
+    "2026-10-06": "NTC",
+    "2026-10-07": "NTD",
     "2026-10-08": "NTF",
     "2026-10-09": "NTF",
     "2026-10-13": "NTG",
+    "2026-10-14": "NTG",
     "2026-10-15": "NTH",
     "2026-10-16": "NTJ",
-    "2026-10-19": "NTJ"
+    "2026-10-19": "NTJ",
+    "2026-10-20": "NTK"
   },
   "monthEnds": {
+    "2026-08": {
+      "date": "2026-08-31",
+      "letters": "NSG",
+      "source": "DGT-mensual"
+    },
     "2026-09": {
       "date": "2026-09-30",
-      "letters": "NSZ",
-      "source": "referencia-publica-serie"
+      "letters": "NTB",
+      "source": "DGT-mensual"
     },
     "2026-10": {
-      "date": "2026-10-19",
-      "letters": "NTJ",
-      "source": "referencia-publica-serie"
+      "date": "2026-10-20",
+      "letters": "NTK",
+      "source": "DGT-diario"
     }
   }
 }
