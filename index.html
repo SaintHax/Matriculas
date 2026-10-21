@@ -434,7 +434,7 @@ footer{position:relative;z-index:1;display:flex;align-items:center;justify-conte
     if(!found){result.replaceChildren();result.classList.remove('show');return;}
     result.replaceChildren();
     function add(cls,text){const span=document.createElement('span');span.className=cls;span.textContent=text;result.appendChild(span);}
-    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${found.estimated?'≈ ':''}${months[found.month]} de ${found.year}`:'Fecha no disponible'));
+    add('result-date',found.range||(found.year&&Number.isInteger(found.month)?`${months[found.month]} de ${found.year}`:'Fecha no disponible'));
     if(found.year&&Number.isInteger(found.month)&&!found.range){
       add('result-star','★');
       add('elapsed',elapsedSince(found.year,found.month));
