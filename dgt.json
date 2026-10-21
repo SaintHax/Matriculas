@@ -1,0 +1,24 @@
+{
+  "updatedAt": "2026-10-19",
+  "source": "https://www.dgt.es/",
+  "daily": {
+    "2026-10-08": "NTF",
+    "2026-10-09": "NTF",
+    "2026-10-13": "NTG",
+    "2026-10-15": "NTH",
+    "2026-10-16": "NTJ",
+    "2026-10-19": "NTJ"
+  },
+  "monthEnds": {
+    "2026-09": {
+      "date": "2026-09-30",
+      "letters": "NSZ",
+      "source": "referencia-publica-serie"
+    },
+    "2026-10": {
+      "date": "2026-10-19",
+      "letters": "NTJ",
+      "source": "referencia-publica-serie"
+    }
+  }
+}
