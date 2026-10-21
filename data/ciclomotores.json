@@ -1,0 +1,54 @@
+{
+  "updatedAt": "2026-10-19",
+  "note": "Hitos de fecha documentados, no tabla mensual completa. No interpolar intervalos amplios como mes exacto.",
+  "references": [
+    {
+      "plate": "C0000BBB",
+      "date": "1999-07-27",
+      "precision": "range-start",
+      "source": "https://www.dgt.es/export/sites/web-DGT/.galleries/downloads/dgt-en-cifras/publicaciones/Anuario_Estadistico_General/Anuario-estadistico-general-2000.pdf"
+    },
+    {
+      "plate": "C0000BPJ",
+      "date": "2004-01-01",
+      "precision": "range-end",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C0000BRB",
+      "date": "2004-11-01",
+      "precision": "month-hint",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C0000BSB",
+      "date": "2006-03-01",
+      "precision": "month-hint",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C0000BTB",
+      "date": "2007-06-01",
+      "precision": "month-hint",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C0000BVB",
+      "date": "2009-07-01",
+      "precision": "month-hint",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C0000BWB",
+      "date": "2017-06-01",
+      "precision": "month-hint",
+      "source": "https://matriculasdelmundo.com/fechas-matriculas-motos.php"
+    },
+    {
+      "plate": "C8833BWY",
+      "date": "2026-10-19",
+      "precision": "observed",
+      "source": "https://www.seisenlinea.com/ultima-matricula/"
+    }
+  ]
+}
