@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "note": "Hitos de fecha documentados, no tabla mensual completa. No interpolar intervalos amplios como mes exacto.",
   "references": [
     {
@@ -89,6 +89,12 @@
     {
       "plate": "C9498BWY",
       "date": "2026-10-28",
+      "precision": "observed",
+      "source": "https://www.seisenlinea.com/ultima-matricula/"
+    },
+    {
+      "plate": "C9593BWY",
+      "date": "2026-10-29",
       "precision": "observed",
       "source": "https://www.seisenlinea.com/ultima-matricula/"
     }
