@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "source": "https://www.dgt.es/menusecundario/dgt-en-cifras/matraba-listados/matriculaciones-automoviles-diario.html",
   "daily": {
     "2026-10-01": "NTB",
@@ -34,7 +34,8 @@
     "2026-11-12": "NVB",
     "2026-11-13": "NVC",
     "2026-11-16": "NVD",
-    "2026-11-17": "NVD"
+    "2026-11-17": "NVD",
+    "2026-11-18": "NVF"
   },
   "monthEnds": {
     "2026-08": {
@@ -53,8 +54,8 @@
       "source": "DGT-mensual"
     },
     "2026-11": {
-      "date": "2026-11-17",
-      "letters": "NVD",
+      "date": "2026-11-18",
+      "letters": "NVF",
       "source": "DGT-diario"
     }
   }
